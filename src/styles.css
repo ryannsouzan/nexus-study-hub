@@ -1984,3 +1984,539 @@ label input[type='checkbox'] {
     scroll-behavior: auto !important;
   }
 }
+/* Biblioteca editorial: capas e modos de consulta */
+.library-view-toggle {
+  margin-left: 0;
+  gap: 3px;
+}
+.library-view-toggle button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 7px 10px;
+}
+.book-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 30px 23px;
+}
+.book-card {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.book-cover-link {
+  display: block;
+  border-radius: 8px;
+}
+.book-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: var(--sidebar);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.book-cover-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  color: var(--accent);
+  background: linear-gradient(140deg, var(--accent-light), var(--sidebar));
+}
+.book-cover-placeholder:after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.book-cover-placeholder span {
+  font-size: 8px;
+  letter-spacing: 1.7px;
+  opacity: 0.7;
+}
+.book-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--sidebar);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.book-cover img.loaded {
+  opacity: 1;
+}
+.cover-caption {
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  text-align: center;
+  font-size: 9px;
+  color: var(--muted);
+}
+.book-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 13px;
+}
+.book-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+.book-title:hover {
+  color: var(--accent);
+}
+.book-card .book-title {
+  min-height: 41px;
+}
+.book-card .resource-actions {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.book-author {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.book-card .badges {
+  margin-top: 12px;
+  min-height: 22px;
+}
+.book-card .progress-block {
+  margin-top: 13px;
+}
+.book-card .progress-label {
+  font-size: 10px;
+}
+.book-no-progress {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.other-resources {
+  margin-top: 38px;
+}
+.resource-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.resource-list-row {
+  display: grid;
+  grid-template-columns:
+    42px minmax(150px, 2fr) minmax(90px, 1fr) minmax(80px, 0.7fr) minmax(90px, 1fr)
+    24px;
+  gap: 18px;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.resource-list-row:last-child {
+  border-bottom: 0;
+}
+.resource-thumbnail {
+  width: 42px;
+  display: block;
+}
+.resource-thumbnail .book-cover {
+  border-radius: 3px;
+}
+.resource-thumbnail .book-cover-placeholder > span,
+.resource-thumbnail .cover-caption {
+  display: none;
+}
+.resource-thumbnail .book-cover-placeholder > svg {
+  width: 20px;
+}
+.resource-thumbnail .book-cover-placeholder:after {
+  left: 4px;
+}
+.resource-list-name {
+  min-width: 0;
+}
+.resource-list-name p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.resource-list-name .example-badge {
+  margin-top: 5px;
+}
+.resource-list-area {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.resource-list-row > .badge {
+  justify-self: start;
+  font-size: 9px;
+}
+.resource-list-progress .progress-block {
+  margin-top: 0;
+}
+.list-resource-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 63px;
+  border-radius: 5px;
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.cover-fields {
+  border: 1px solid var(--border);
+  padding: 17px;
+  border-radius: 8px;
+  min-width: 0;
+}
+.cover-fields legend {
+  padding: 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.cover-field-layout {
+  display: grid;
+  grid-template-columns: 105px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.cover-field-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+}
+.cover-field-controls > label:first-child {
+  width: 100%;
+}
+.cover-field-controls .text-button {
+  padding: 0;
+}
+.cover-help {
+  font-size: 10px !important;
+  color: var(--muted);
+  line-height: 1.8;
+  max-width: 400px;
+}
+.upload-cover {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  flex-direction: row;
+}
+.upload-cover input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+.upload-cover:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.upload-cover.disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.cover-fields > .field-error {
+  margin-top: 15px;
+}
+.book-detail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.book-detail-toolbar .back-link {
+  margin: 0;
+}
+.book-detail {
+  display: grid;
+  grid-template-columns: minmax(180px, 255px) minmax(0, 1fr);
+  gap: clamp(25px, 4vw, 60px);
+  padding: 28px 0 35px;
+}
+.book-detail-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 13px;
+  min-width: 0;
+}
+.book-detail-cover > .book-cover {
+  margin-bottom: 4px;
+}
+.book-detail-cover .text-button {
+  align-self: center;
+  padding: 0;
+}
+.book-detail-cover .cover-help {
+  font-size: 10px !important;
+  margin-top: 3px;
+}
+.book-detail-content {
+  min-width: 0;
+}
+.book-detail-content h1 {
+  line-height: 1.3;
+  font-size: clamp(25px, 2.6vw, 37px);
+  font-weight: 600;
+}
+.book-subtitle {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.book-detail-author {
+  font-size: 14px;
+  margin-top: 20px;
+}
+.book-detail-content .badges {
+  margin-top: 16px;
+}
+.book-detail-content .badge {
+  font-size: 10px;
+}
+.book-metadata {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 21px;
+  margin: 27px 0;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.book-metadata dt {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.book-metadata dd {
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.book-metadata dd a {
+  color: var(--accent);
+}
+.book-reading {
+  max-width: 500px;
+}
+.book-reading .progress-label {
+  font-size: 12px;
+}
+.book-reading .progress-track {
+  height: 5px;
+}
+.book-reading > p {
+  margin-top: 14px;
+  line-height: 1.8;
+}
+.reading-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+.reading-form label {
+  max-width: 145px;
+}
+.reading-form input {
+  background: var(--surface);
+}
+.book-description {
+  margin-top: 28px;
+}
+.book-description p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin-top: 12px;
+}
+.book-material-link {
+  margin-top: 22px;
+}
+.book-cover-link:focus-visible {
+  outline-offset: 5px;
+}
+@media (min-width: 1600px) {
+  .book-shelf {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 28px;
+  }
+}
+@media (max-width: 1100px) {
+  .resource-list-row {
+    grid-template-columns: 42px minmax(140px, 2fr) minmax(85px, 1fr) 100px 24px;
+    gap: 14px;
+  }
+  .resource-list-area {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: -10px;
+  }
+  .resource-list-progress {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .resource-list-row > .resource-actions {
+    grid-column: 5;
+    grid-row: 1;
+  }
+  .book-detail {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+@media (max-width: 600px) {
+  .book-shelf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 25px 17px;
+  }
+  .book-title {
+    font-size: 12px;
+  }
+  .book-card .book-title {
+    min-height: 39px;
+  }
+  .book-author {
+    font-size: 10px;
+  }
+  .book-card .badge {
+    font-size: 8px;
+  }
+  .book-shelf .progress-label {
+    font-size: 9px;
+  }
+  .resource-list-row {
+    grid-template-columns: 38px minmax(0, 1fr) 24px;
+    gap: 9px 13px;
+    padding: 14px;
+  }
+  .resource-thumbnail {
+    width: 38px;
+    grid-row: 1/4;
+  }
+  .resource-list-name {
+    grid-column: 2;
+  }
+  .resource-list-area {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    font-size: 10px;
+  }
+  .resource-list-row > .badge {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .resource-list-progress {
+    grid-column: 2;
+    grid-row: 4;
+    max-width: 190px;
+    margin-top: 3px;
+  }
+  .resource-list-row > .resource-actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .resource-list-progress .progress-label {
+    font-size: 10px;
+  }
+  .book-detail {
+    grid-template-columns: 1fr;
+    padding-top: 10px;
+    gap: 28px;
+  }
+  .book-detail-cover {
+    max-width: 210px;
+    justify-self: center;
+  }
+  .book-detail-cover .book-cover {
+    width: 210px;
+  }
+  .book-detail-content h1 {
+    font-size: 28px;
+  }
+  .book-detail-content .eyebrow {
+    text-align: center;
+  }
+  .book-subtitle {
+    font-size: 15px;
+  }
+  .book-metadata {
+    gap: 22px 15px;
+  }
+  .cover-field-layout {
+    grid-template-columns: 80px 1fr;
+    gap: 13px;
+  }
+  .cover-fields {
+    padding: 12px;
+  }
+  .cover-field-controls .button {
+    font-size: 10px;
+  }
+  .cover-help {
+    font-size: 9px !important;
+  }
+  .book-detail-toolbar .button {
+    font-size: 10px;
+    padding: 8px 11px;
+  }
+  .book-cover-placeholder span {
+    font-size: 7px;
+  }
+  .library-view-toggle {
+    margin-left: auto;
+  }
+}
+
+.book-card .book-title::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+}
+.book-card .resource-actions {
+  position: relative;
+  z-index: 2;
+}
+.book-card:has(.book-title:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+  border-radius: 8px;
+}

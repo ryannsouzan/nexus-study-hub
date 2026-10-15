@@ -1,3 +1,4 @@
+import { BookDetails } from '../components/BookDetails';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Pencil, Trash2, Link2, Unlink, Plus, ExternalLink } from 'lucide-react';
@@ -74,6 +75,8 @@ export function Details({ kind }: { kind: EntityKind }) {
   const relatedResources = data.resources.filter((r) =>
     area ? r.areaId === id : r.projectIds.includes(id!),
   );
+  if (resource?.type === 'livro')
+    return <BookDetails key={`${resource.id}-${resource.currentPage}`} book={resource} />;
   return (
     <>
       <Link className="back-link" to={paths[kind]}>
@@ -447,16 +450,12 @@ export function Details({ kind }: { kind: EntityKind }) {
               </a>
             )}
           </div>
-          {['livro', 'curso'].includes(resource.type) && (
+          {resource.type === 'curso' && (
             <div className="detail-progress">
               {resourceProgress(resource) !== null ? (
                 <Progress
                   value={resourceProgress(resource)}
-                  label={
-                    resource.type === 'livro'
-                      ? `${resource.currentPage} de ${resource.totalPages} páginas`
-                      : `${resource.completedLessons} de ${resource.totalLessons} aulas`
-                  }
+                  label={`${resource.completedLessons} de ${resource.totalLessons} aulas`}
                 />
               ) : (
                 <p>Informe o total para acompanhar o progresso.</p>

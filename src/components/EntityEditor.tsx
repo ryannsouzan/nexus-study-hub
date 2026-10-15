@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { CoverFields, type CoverDraft } from './CoverFields';
 import { useForm } from 'react-hook-form';
 import {
   areaInputSchema,
@@ -33,6 +35,11 @@ type Values = {
   startDate: string;
   deadline: string;
   author: string;
+  subtitle: string;
+  isbn: string;
+  publisher: string;
+  edition: string;
+  coverUrl: string;
   type: Resource['type'];
   url: string;
   tags: string;
@@ -63,6 +70,12 @@ export function EntityEditor({
 }) {
   const { kind, record } = target;
   const notify = useNotice();
+  const source = record && 'coverId' in record ? record : undefined;
+  const [cover, setCover] = useState<CoverDraft>({
+    id: source?.coverId ?? '',
+    url: source?.coverUrl ?? '',
+  });
+  const [coverBusy, setCoverBusy] = useState(false);
   const defaults: Values = {
     name: '',
     title: '',
@@ -78,6 +91,11 @@ export function EntityEditor({
     startDate: '',
     deadline: '',
     author: '',
+    subtitle: '',
+    isbn: '',
+    publisher: '',
+    edition: '',
+    coverUrl: '',
     type: 'livro',
     url: '',
     totalPages: 0,
@@ -102,8 +120,15 @@ export function EntityEditor({
   const statuses =
     kind === 'project' ? projectStatuses : kind === 'task' ? taskStatuses : resourceStatuses;
   const submit = handleSubmit(async (values) => {
+    if (coverBusy) return;
     const raw = {
       ...values,
+      ...(kind === 'resource'
+        ? {
+            coverUrl: resourceType === 'livro' ? cover.url : '',
+            coverId: resourceType === 'livro' ? cover.id : '',
+          }
+        : {}),
       tags: values.tags
         .split(',')
         .map((s) => s.trim())
@@ -125,7 +150,12 @@ export function EntityEditor({
       if (kind === 'area') await saveArea(areaInputSchema.parse(raw), record?.id);
       if (kind === 'project') await saveProject(projectInputSchema.parse(raw), record?.id);
       if (kind === 'task') await saveTask(taskInputSchema.parse(raw), record?.id);
-      if (kind === 'resource') await saveResource(resourceInputSchema.parse(raw), record?.id);
+      if (kind === 'resource')
+        await saveResource(
+          resourceInputSchema.parse(raw),
+          record?.id,
+          resourceType === 'livro' ? cover.upload : null,
+        );
       notify(
         `${labels[kind][0].toUpperCase() + labels[kind].slice(1)} ${record ? 'atualizado' : 'criado'} com sucesso.`,
       );
@@ -144,7 +174,7 @@ export function EntityEditor({
     <Modal
       open
       onClose={() => {
-        if (!isSubmitting) onClose();
+        if (!isSubmitting && !coverBusy) onClose();
       }}
       title={`${record ? 'Editar' : 'Criar'} ${labels[kind]}`}
       description="Organize suas informações. Os dados ficam salvos neste navegador."
@@ -317,6 +347,48 @@ export function EntityEditor({
               </fieldset>
               {resourceType === 'livro' && (
                 <>
+                  <label className="full">
+                    Subtítulo
+                    <input {...register('subtitle')} />
+                    {fieldError('subtitle')}
+                  </label>
+                  <label>
+                    ISBN-10 ou ISBN-13
+                    <input
+                      aria-label="ISBN-10 ou ISBN-13"
+                      {...register('isbn')}
+                      placeholder="978-…"
+                    />
+                    {fieldError('isbn')}
+                  </label>
+                  <label>
+                    Editora
+                    <input {...register('publisher')} />
+                    {fieldError('publisher')}
+                  </label>
+                  <label>
+                    Edição
+                    <input {...register('edition')} placeholder="Ex.: 3ª edição" />
+                    {fieldError('edition')}
+                  </label>
+                  <label>
+                    Ano de publicação
+                    <input
+                      type="number"
+                      min="0"
+                      max="9999"
+                      {...register('year', { setValueAs: (v) => (v === '' ? 0 : Number(v)) })}
+                    />
+                    {fieldError('year')}
+                  </label>
+                  <CoverFields
+                    value={cover}
+                    onChange={setCover}
+                    onBusyChange={setCoverBusy}
+                    title={watch('title')}
+                    error={errors.coverUrl?.message}
+                  />
+
                   <label>
                     Total de páginas
                     <input
@@ -397,12 +469,12 @@ export function EntityEditor({
           <button
             type="button"
             className="button secondary"
-            disabled={isSubmitting}
+            disabled={isSubmitting || coverBusy}
             onClick={onClose}
           >
             Cancelar
           </button>
-          <button type="submit" className="button primary" disabled={isSubmitting}>
+          <button type="submit" className="button primary" disabled={isSubmitting || coverBusy}>
             {isSubmitting ? 'Salvando…' : record ? 'Salvar alterações' : 'Criar ' + labels[kind]}
           </button>
         </div>

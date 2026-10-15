@@ -77,7 +77,15 @@ export function Layout() {
       items: data.resources.map((r) => ({
         id: r.id,
         title: r.title,
-        description: [r.description, r.author, ...r.tags].join(' '),
+        description: [
+          r.description,
+          r.author,
+          r.subtitle,
+          r.isbn,
+          r.isbnNormalized,
+          r.publisher,
+          ...r.tags,
+        ].join(' '),
         path: `/biblioteca/${r.id}`,
       })),
     },

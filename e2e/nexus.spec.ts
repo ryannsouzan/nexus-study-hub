@@ -84,7 +84,12 @@ test('organização, biblioteca, persistência, backup e dashboard', async ({ pa
     '40',
   );
   await page.getByRole('link', { name: 'Estatística experimental', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'Aprender DoE', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Estatística experimental', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator('.project-card').getByRole('link', { name: 'Aprender DoE', exact: true }),
+  ).toBeVisible();
   await page.goto('/');
   const stats = page.getByRole('region', { name: 'Indicadores' });
   await expect(stats).toContainText('Projetos ativos1');

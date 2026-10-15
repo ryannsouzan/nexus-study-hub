@@ -1,6 +1,6 @@
 # Nexus — Personal Knowledge & Learning Hub
 
-Uma aplicação web em português brasileiro para organizar estudos, projetos, tarefas e referências. Esta primeira versão funciona no navegador, com dados persistidos em IndexedDB, sem conta ou API remota.
+Uma aplicação web em português brasileiro para organizar estudos, projetos, tarefas e referências. A versão 0.1.1 (Melhoria 1.1) funciona no navegador, com dados persistidos em IndexedDB, sem conta ou API remota.
 
 ## Iniciar
 
@@ -43,7 +43,9 @@ O Playwright inicia e encerra seu próprio servidor. Cada teste utiliza um conte
 - Áreas: criação, edição, pesquisa, exclusão e detalhes com projetos e recursos associados; escolha de cor e ícone.
 - Projetos: cards, Kanban com mudança de status, filtros por área/status/prioridade, objetivo, início, prazo e histórico. Tarefas e recursos podem ser criados, associados e desvinculados nos detalhes.
 - Tarefas: criação, edição, exclusão, conclusão e reabertura, associação opcional, filtros por status/projeto, ordenação por prazo/prioridade e visualizações Todas, Hoje, Próximos 7 dias, Atrasadas e Concluídas.
-- Biblioteca: sete tipos de materiais, autor, link, tags, área e vários projetos; páginas para livros, aulas para cursos e DOI/revista/ano para artigos.
+- Biblioteca: Estante responsiva (aproximadamente 4–6 colunas no desktop) e Lista compacta, com preferência persistida no IndexedDB; filtros por tipo/status e busca por título, autor, subtítulo, editora e ISBN. Outros materiais mantêm seus cards e funcionalidades.
+- Livros: capa por URL ou upload local, prévia/substituição/remoção, subtítulo, ISBN-10/13, editora, ano, edição e atualização direta da página atual nos detalhes. O ISBN é validado pelo dígito verificador; a grafia original é preservada em `isbn` e a forma sem espaços/hífens em `isbnNormalized`.
+- Biblioteca também mantém cursos, artigos, vídeos, apostilas, documentação e outros materiais, incluindo aulas e DOI/revista/ano quando aplicável.
 - Busca global por nome/título, descrição, autor e tags, com resultados agrupados que abrem o registro.
 - Configurações: tema claro/escuro persistido, exportação e importação JSON e remoção de exemplos.
 - Layout responsivo, navegação sem recarregar a página, diálogos com foco e teclado, feedback e estados de carregamento, erro e vazio.
@@ -52,18 +54,21 @@ Os exemplos iniciais são explicitamente marcados como **Exemplo**, não registr
 
 ## Arquitetura
 
-| Local                          | Responsabilidade                                                                          |
-| ------------------------------ | ----------------------------------------------------------------------------------------- |
-| `src/models/schema.ts`         | Entidades, tipos e validações Zod, incluindo competências preparadas para uma fase futura |
-| `src/services/db.ts`           | Dexie, esquema IndexedDB versão 1, tabelas e índices                                      |
-| `src/services/repository.ts`   | CRUD, transações, integridade, histórico, backup e remoção de exemplos                    |
-| `src/services/calculations.ts` | Progresso, indicadores, filtros, busca e datas locais                                     |
-| `src/services/seed.ts`         | Inicialização idempotente dos dados demonstrativos                                        |
-| `src/hooks/`                   | Consultas reativas, contexto da aplicação e tema                                          |
-| `src/components/`              | Layout, busca, formulários, cards, diálogos e feedback                                    |
-| `src/pages/`                   | Dashboard, coleções, detalhes e configurações                                             |
-| `src/test/`                    | Testes de regras de negócio, banco e formulários                                          |
-| `e2e/`                         | Fluxos reais no Chromium com Playwright                                                   |
+| Local                                                                                      | Responsabilidade                                                                                   |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `src/models/schema.ts`                                                                     | Entidades, tipos e validações Zod, incluindo competências preparadas para uma fase futura          |
+| `src/services/db.ts`                                                                       | Dexie, esquema IndexedDB versão 2 e migração automática dos registros da Fase 1, tabelas e índices |
+| `src/services/repository.ts`                                                               | CRUD, transações, integridade, histórico, backup e remoção de exemplos                             |
+| `src/services/calculations.ts`                                                             | Progresso, indicadores, filtros, busca e datas locais                                              |
+| `src/services/covers.ts`                                                                   | Validação, decodificação, otimização proporcional, hash SHA-256 e codificação binária de capas     |
+| `src/components/BookCover.tsx`, `BookDetails.tsx`, `CoverFields.tsx`, `LibraryRecords.tsx` | Estante/lista, detalhes editoriais, upload/prévia e fallback de capas                              |
+| `src/hooks/useObjectUrl.ts`, `useLibraryView.ts`                                           | Ciclo de vida das URLs temporárias e preferência persistida de visualização                        |
+| `src/services/seed.ts`                                                                     | Inicialização idempotente dos dados demonstrativos                                                 |
+| `src/hooks/`                                                                               | Consultas reativas, contexto da aplicação e tema                                                   |
+| `src/components/`                                                                          | Layout, busca, formulários, cards, diálogos e feedback                                             |
+| `src/pages/`                                                                               | Dashboard, coleções, detalhes e configurações                                                      |
+| `src/test/`                                                                                | Testes de regras de negócio, banco e formulários                                                   |
+| `e2e/`                                                                                     | Fluxos reais no Chromium com Playwright                                                            |
 
 Stack: React + TypeScript + Vite, Tailwind CSS 4 e estilos próprios, Radix Dialog como primitivo acessível equivalente aos diálogos de shadcn/ui, Lucide, React Router, Recharts, Dexie, React Hook Form e Zod. O lockfile fixa as versões efetivamente instaladas. O dashboard carrega sob demanda para separar a biblioteca de gráficos das telas de organização.
 
@@ -81,19 +86,35 @@ As operações de dados passam pela camada de serviços; o React recebe atualiza
 
 ## Backup e armazenamento
 
-Configurações → Exportar backup gera JSON com versão do esquema, data de exportação, áreas, projetos, tarefas, recursos, competências e histórico. Tema e configurações internas do navegador não são exportados.
+Configurações → Exportar backup gera JSON com versão do esquema, data de exportação, áreas, projetos, tarefas, recursos, competências, histórico e capas locais. As imagens são Blobs no IndexedDB e são codificadas em Base64 somente no arquivo JSON. Imagens idênticas são exportadas uma única vez, vinculadas por ID/hash. Tema, preferência Estante/Lista e configurações internas do navegador não são exportados nem substituídos pela importação.
 
-Para restaurar, selecione um JSON de até 20 MB. O sistema valida versão, campos, datas, IDs únicos, contagens de progresso e integridade dos relacionamentos **antes** de pedir confirmação. A importação substitui o conjunto completo de dados em uma transação, mantendo os IDs. Formato inválido, versão incompatível ou vínculos quebrados são rejeitados sem alterar os dados existentes. Não há mesclagem de backups. Exporte seus dados atuais antes de substituir.
+Para restaurar, selecione um JSON de até 100 MB. O sistema valida versão, campos, datas, IDs únicos, contagens de progresso e integridade dos relacionamentos **antes** de pedir confirmação. A importação substitui o conjunto completo de dados em uma transação, mantendo os IDs. Formato inválido, versão incompatível ou vínculos quebrados são rejeitados sem alterar os dados existentes. Backups da versão 1 (Fase 1, sem imagens locais) continuam aceitos e são normalizados para o esquema atual. Backups de versões futuras não são aceitos. Não há mesclagem de backups. Exporte seus dados atuais antes de substituir.
 
 Os dados pertencem ao navegador **e à origem do site** (protocolo, host e porta). Mudar o endereço pode mostrar um banco vazio mesmo no mesmo navegador. Limpar os dados do site, perder o dispositivo ou usar navegação privada pode perder os registros. Não há sincronização ou cópia automática: faça backups regulares. O arquivo JSON contém suas informações pessoais.
+
+## Capas de livros e migração 1 → 2
+
+O upload aceita **PNG, JPEG e WebP com até 5 MB**. O conteúdo é verificado pelo formato binário e pelo decodificador real do navegador. Imagens corrompidas são rejeitadas; o arquivo anterior permanece intacto. O limite de resolução de entrada é 40 megapixels.
+
+A imagem é redimensionada proporcionalmente, sem ampliar, para até **800 × 1200 pixels**. O canvas prefere WebP com qualidade 0,82 e aceita PNG como fallback do navegador. A imagem otimizada deve ter até 2 MB; a original em alta resolução não é retida. A exibição usa proporção 2:3 com `object-fit: contain`, sem recortar ou distorcer a imagem. Capas ausentes ou indisponíveis mostram um placeholder. Há alt text, carregamento preguiçoso, estados de carregamento/erro e controles por teclado.
+
+A tabela `covers` armazena `{ id, blob, mime, width, height }`, com SHA-256 do conteúdo como ID, e o recurso armazena `coverId`. Não há imagens em localStorage. Livros que usam o mesmo binário compartilham um Blob. Substituir/remover uma capa, excluir um livro, convertê-lo em outro tipo ou remover exemplos libera o Blob somente quando nenhum outro livro o referencia. Alterações e limpeza são transacionais. As URLs de objeto são temporárias, recriadas ao carregar e revogadas ao trocar a imagem ou desmontar o componente.
+
+URLs externas são opcionais e devem usar HTTP(S); a aplicação preserva apenas a URL, sem baixar ou incluir a imagem no backup. Elas dependem de internet, disponibilidade e regras do servidor de origem. Uma falha de carregamento não impede consultar ou editar o livro. Local e URL são fontes alternativas: selecionar uma substitui a outra.
+
+A migração Dexie da versão 1 para 2 mantém IDs, estados, progresso e relacionamentos, adiciona campos opcionais aos registros existentes e cria a tabela de capas. Faça um backup antes de atualizar e evite voltar para uma versão antiga da aplicação depois da migração (ela não conhece o esquema 2).
+
+A restauração valida estrutura, Base64, tipo e tamanho binário, referências, dimensões, decodificação e hash SHA-256 das imagens **antes de iniciar a substituição**. Uma falha de integridade ou armazenamento mantém o conjunto anterior graças à transação. JSONs grandes usam memória temporária; o limite de importação na interface é 100 MB. A origem deve ser segura (HTTPS ou localhost) para as APIs de armazenamento/criptografia do navegador.
 
 ## Validação
 
 Os testes automatizados cobrem CRUD, associações, exclusões seguras, criação/conclusão/reabertura, 40% de progresso, 30% de leitura, cursos, filtros de datas, indicadores, reabertura do banco, remoção de exemplos, round-trip de backup e rejeição de backups inválidos sem perda de dados. Os testes de formulário verificam validação e escrita efetiva no IndexedDB usando fake-indexeddb.
 
-Os testes Playwright verificam organização e biblioteca, recarregamento, download/importação do backup, integridade restaurada, indicadores/gráfico, busca, navegação, filtros, Kanban, tema, exclusão segura e layout móvel/teclado. Consulte o resultado do runner ao executá-los; a instalação do pacote Playwright sozinha não valida a interface.
+Os testes de capas verificam criação sem capa e por URL, deduplicação, troca/remoção/limpeza, backup binário, rejeição de imagens adulteradas, migração v1 e revogação de URLs temporárias. O jsdom usa um decodificador simulado; os testes Chromium executam a decodificação e a otimização reais.
 
-### Resultado executado nesta implementação
+Os testes Playwright verificam upload PNG válido, formato/tamanho inválidos, imagem corrompida, WebP proporcional, substituição e remoção, recarga com capa persistente, exportação/importação das imagens, Estante/Lista persistentes, filtros, fallback de URL e responsividade, além de organização e biblioteca, recarregamento, download/importação do backup, integridade restaurada, indicadores/gráfico, busca, navegação, filtros, Kanban, tema, exclusão segura e layout móvel/teclado. Consulte o resultado do runner ao executá-los; a instalação do pacote Playwright sozinha não valida a interface.
+
+### Resultado executado na Fase 1 (antes da Melhoria 1.1)
 
 | Verificação                          | Resultado                                                                                                                 |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
@@ -106,6 +127,13 @@ Os testes Playwright verificam organização e biblioteca, recarregamento, downl
 
 Os fluxos de aceitação foram executados: projeto com 40%, livro com 30%, persistência após recarga, exportação/importação com relacionamentos preservados, dashboard atualizado, busca e navegação.
 
+### Resultado executado na Melhoria 1.1
+
+- **27 testes** Vitest/Testing Library aprovados.
+- **5 cenários** Playwright/Chromium aprovados: upload/otimização/troca/remoção/restauração; Estante/Lista, filtros e responsividade; e os três cenários de regressão da Fase 1.
+- TypeScript, ESLint, Prettier e build de produção aprovados.
+- Capturas dos dois modos, detalhes, tema escuro e mobile geradas com dados de exemplo e capas ilustrativas de teste.
+
 ## Limites desta versão
 
 Sem backend, autenticação, sincronização, calendário avançado, IA, grafo, upload de PDFs, integrações, cronômetro ou interface de competências. O Kanban muda o status por seletor; não oferece arrastar e soltar. A aplicação precisa ser servida por HTTP(S); abrir `index.html` diretamente não é suportado. Hospedagem estática futura deve redirecionar rotas da SPA para `index.html`. Não há service worker para garantir recarga offline sem servidor.
@@ -117,3 +145,7 @@ IndexedDB deve estar disponível e autorizado. A preferência de tema continua v
 As alterações ficam no checkout e na branch de trabalho do ambiente, sem publicação externa. Para revisar, use `git status`, examine os arquivos novos e `git diff` para arquivos já rastreados, ou a interface de alterações do Codex. Após a revisão, faça commit na branch de trabalho e abra um pull request para `main`. Nenhum push, merge ou deploy é necessário para executar localmente.
 
 Cada tarefa da nuvem já usa um ambiente isolado: utilize o checkout existente, sem criar worktrees para executar o projeto.
+
+## Revisar a Melhoria 1.1
+
+A branch `feat/library-book-covers` parte da `main` após a integração da Fase 1 pelo PR #1. Compare a branch com `main` para revisar somente a melhoria. Não é necessário fazer merge ou publicar a aplicação para testar a branch com `npm ci` e `npm run dev`.

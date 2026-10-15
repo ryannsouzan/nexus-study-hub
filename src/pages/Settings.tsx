@@ -109,8 +109,8 @@ export function Settings({
                 e.target.value = '';
                 if (!file) return;
                 try {
-                  if (file.size > 20 * 1024 * 1024)
-                    throw new Error('O arquivo deve ter no máximo 20 MB.');
+                  if (file.size > 100 * 1024 * 1024)
+                    throw new Error('O arquivo deve ter no máximo 100 MB.');
                   setBackup(validateBackup(JSON.parse(await file.text())));
                 } catch (error) {
                   notify(
@@ -124,8 +124,9 @@ export function Settings({
             />
           </div>
           <p className="small muted">
-            Formato JSON · Esquema versão 1 · Áreas, projetos, tarefas, biblioteca, competências e
-            histórico.
+            Formato JSON · Esquema versão 2 · Áreas, projetos, tarefas, biblioteca, competências e
+            histórico e capas locais. URLs externas são preservadas como links, sem incorporar as
+            imagens. Backups da versão 1 continuam aceitos.
           </p>
         </section>
         <section className="panel settings-section">
@@ -145,7 +146,7 @@ export function Settings({
           </p>
         </section>
         <section className="panel settings-section about">
-          <span className="eyebrow">NEXUS · VERSÃO 0.1.0</span>
+          <span className="eyebrow">NEXUS · VERSÃO 0.1.1</span>
           <h2>Um lugar para conectar o que você aprende.</h2>
           <p>
             MVP local de estudos, projetos e conhecimento. Sem contas, sem serviços externos e sem
