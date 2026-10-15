@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidIsbn, normalizeIsbn } from './books';
 export const priorities = { alta: 'Alta', media: 'Média', baixa: 'Baixa' } as const;
 export const projectStatuses = {
   planejado: 'Planejado',
@@ -82,6 +83,31 @@ export const resourceInputSchema = z
   .object({
     title,
     author: z.string().max(200),
+    subtitle: z.string().trim().max(300, 'Use até 300 caracteres.').optional(),
+    isbn: z
+      .string()
+      .trim()
+      .max(32)
+      .refine(isValidIsbn, 'Informe um ISBN-10 ou ISBN-13 válido.')
+      .optional(),
+    publisher: z.string().trim().max(200, 'Use até 200 caracteres.').optional(),
+    edition: z.string().trim().max(80, 'Use até 80 caracteres.').optional(),
+    coverId: z
+      .string()
+      .regex(/^(?:[a-f0-9]{64})?$/)
+      .optional(),
+    coverUrl: z
+      .string()
+      .max(2048)
+      .refine((v) => {
+        if (!v) return true;
+        try {
+          return ['http:', 'https:'].includes(new URL(v).protocol);
+        } catch {
+          return false;
+        }
+      }, 'Use uma URL de capa http ou https válida.')
+      .optional(),
     type: z.enum(['livro', 'artigo', 'curso', 'video', 'apostila', 'documentacao', 'outro']),
     description,
     url: z.string().refine((v) => {
@@ -105,6 +131,10 @@ export const resourceInputSchema = z
     totalLessons: z.number().int().min(0),
     completedLessons: z.number().int().min(0),
   })
+  .refine((r) => !r.coverId || !r.coverUrl, {
+    message: 'Use uma capa local ou uma URL, não ambas.',
+    path: ['coverUrl'],
+  })
   .refine((r) => r.currentPage <= r.totalPages, {
     message: 'A página atual não pode superar o total.',
     path: ['currentPage'],
@@ -121,7 +151,12 @@ export const taskSchema = taskInputSchema
     message: 'Data de conclusão inconsistente.',
     path: ['completedAt'],
   });
-export const resourceSchema = resourceInputSchema.safeExtend(metadata);
+export const resourceSchema = resourceInputSchema
+  .safeExtend({ ...metadata, isbnNormalized: z.string().optional() })
+  .refine(
+    (r) => r.isbnNormalized === undefined || r.isbnNormalized === normalizeIsbn(r.isbn ?? ''),
+    { message: 'ISBN normalizado inconsistente.', path: ['isbnNormalized'] },
+  );
 export const competencySchema = z.object({
   ...metadata,
   name: title,
@@ -138,8 +173,7 @@ export const activitySchema = z.object({
   at: z.iso.datetime(),
   example: z.boolean(),
 });
-export const backupSchema = z.object({
-  schemaVersion: z.literal(1),
+const backupRecords = z.object({
   exportedAt: z.iso.datetime(),
   areas: z.array(areaSchema),
   projects: z.array(projectSchema),
@@ -147,6 +181,18 @@ export const backupSchema = z.object({
   resources: z.array(resourceSchema),
   competencies: z.array(competencySchema),
   activities: z.array(activitySchema),
+});
+export const coverBackupSchema = z.object({
+  id: z.string().regex(/^[a-f0-9]{64}$/),
+  mime: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  width: z.number().int().min(1).max(800),
+  height: z.number().int().min(1).max(1200),
+  data: z.string().min(1).max(2796204),
+});
+export const legacyBackupSchema = backupRecords.extend({ schemaVersion: z.literal(1) });
+export const backupSchema = backupRecords.extend({
+  schemaVersion: z.literal(2),
+  covers: z.array(coverBackupSchema),
 });
 export type Area = z.infer<typeof areaSchema>;
 export type Project = z.infer<typeof projectSchema>;

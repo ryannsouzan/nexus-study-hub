@@ -68,7 +68,16 @@ const resource: ResourceInput = {
 beforeEach(async () => {
   await db.transaction(
     'rw',
-    [db.areas, db.projects, db.tasks, db.resources, db.competencies, db.activities, db.settings],
+    [
+      db.areas,
+      db.projects,
+      db.tasks,
+      db.resources,
+      db.competencies,
+      db.activities,
+      db.settings,
+      db.covers,
+    ],
     async () => {
       await Promise.all(db.tables.map((t) => t.clear()));
     },
@@ -209,7 +218,7 @@ describe('Backup transacional', () => {
     const t = await saveTask({ ...task, projectId: p, status: 'concluida' });
     const r = await saveResource({ ...resource, areaId: a, projectIds: [p] });
     const backup = await exportBackup();
-    expect(backup.schemaVersion).toBe(1);
+    expect(backup.schemaVersion).toBe(2);
     await deleteEntity('project', p);
     await importBackup(JSON.parse(JSON.stringify(backup)));
     expect((await db.tasks.get(t))?.projectId).toBe(p);
@@ -225,7 +234,7 @@ describe('Backup transacional', () => {
     const backup = await exportBackup();
     const invalid = [
       {},
-      { ...backup, schemaVersion: 2 },
+      { ...backup, schemaVersion: 99 },
       { ...backup, areas: [...backup.areas, ...backup.areas] },
       {
         ...backup,

@@ -1,10 +1,20 @@
 import { db } from './db';
+import { bookDefaults, normalizeIsbn } from '../models/books';
+import {
+  blobBytes,
+  bytesToBase64,
+  base64ToBytes,
+  detectedMime,
+  prepareCoverAsset,
+  MAX_STORED_COVER_BYTES,
+} from './covers';
 import {
   areaInputSchema,
   projectInputSchema,
   taskInputSchema,
   resourceInputSchema,
   backupSchema,
+  legacyBackupSchema,
   type AreaInput,
   type ProjectInput,
   type TaskInput,
@@ -21,6 +31,7 @@ const tables = () => [
   db.competencies,
   db.activities,
   db.settings,
+  db.covers,
 ];
 function meta(existing?: { id: string; createdAt: string; example: boolean }) {
   const now = new Date().toISOString();
@@ -104,20 +115,39 @@ export async function saveTask(input: TaskInput, id?: string) {
     return record.id;
   });
 }
-export async function saveResource(input: ResourceInput, id?: string) {
-  const data = resourceInputSchema.parse(input);
+async function removeUnusedCover(id?: string) {
+  if (id && !(await db.resources.where('coverId').equals(id).count())) await db.covers.delete(id);
+}
+export async function saveResource(input: ResourceInput, id?: string, coverChange?: Blob | null) {
+  const asset = coverChange ? await prepareCoverAsset(coverChange) : null;
+  const data = resourceInputSchema.parse({
+    ...bookDefaults,
+    ...input,
+    ...(coverChange !== undefined
+      ? { coverId: asset?.id ?? '', ...(asset ? { coverUrl: '' } : {}) }
+      : {}),
+  });
+  if (data.type !== 'livro') {
+    data.coverId = '';
+    data.coverUrl = '';
+  }
   return db.transaction('rw', tables(), async () => {
     await exists(db.areas, data.areaId);
     for (const projectId of data.projectIds) await exists(db.projects, projectId);
     const old = id ? await db.resources.get(id) : undefined;
     if (id && !old) throw new Error('Recurso não encontrado.');
+    if (asset && data.type === 'livro') await db.covers.put(asset);
+    if (data.coverId && !(await db.covers.get(data.coverId)))
+      throw new Error('A capa local não foi encontrada. Selecione a imagem novamente.');
     const record = {
       ...data,
+      isbnNormalized: normalizeIsbn(data.isbn ?? ''),
       projectIds: [...new Set(data.projectIds)],
       tags: [...new Set(data.tags)],
       ...meta(old),
     };
     await db.resources.put(record);
+    await removeUnusedCover(old?.coverId);
     await log('resource', record.id, record.title, old ? 'updated' : 'created', record.example);
     return record.id;
   });
@@ -144,13 +174,17 @@ export async function deleteEntity(kind: EntityKind, id: string) {
       await db.projects.delete(id);
     }
     if (kind === 'task') await db.tasks.delete(id);
-    if (kind === 'resource') await db.resources.delete(id);
+    if (kind === 'resource') {
+      const resource = await db.resources.get(id);
+      await db.resources.delete(id);
+      await removeUnusedCover(resource?.coverId);
+    }
     await db.activities.where('entityId').equals(id).delete();
   });
 }
 export async function exportBackup(): Promise<Backup> {
-  return db.transaction('r', tables(), async () => ({
-    schemaVersion: 1,
+  const snapshot = await db.transaction('r', tables(), async () => ({
+    schemaVersion: 2 as const,
     exportedAt: new Date().toISOString(),
     areas: await db.areas.toArray(),
     projects: await db.projects.toArray(),
@@ -158,10 +192,26 @@ export async function exportBackup(): Promise<Backup> {
     resources: await db.resources.toArray(),
     competencies: await db.competencies.toArray(),
     activities: await db.activities.toArray(),
+    covers: await db.covers.toArray(),
   }));
+  return {
+    ...snapshot,
+    covers: await Promise.all(
+      snapshot.covers.map(async (cover) => ({
+        id: cover.id,
+        mime: cover.mime,
+        width: cover.width,
+        height: cover.height,
+        data: bytesToBase64(await blobBytes(cover.blob)),
+      })),
+    ),
+  };
 }
 export function validateBackup(raw: unknown): Backup {
-  const parsed = backupSchema.safeParse(raw);
+  const legacy = legacyBackupSchema.safeParse(raw);
+  const parsed = backupSchema.safeParse(
+    legacy.success ? { ...legacy.data, schemaVersion: 2, covers: [] } : raw,
+  );
   if (!parsed.success)
     throw new Error('Backup inválido ou versão incompatível. Nenhum dado foi alterado.');
   const data = parsed.data;
@@ -172,9 +222,26 @@ export function validateBackup(raw: unknown): Backup {
     data.resources,
     data.competencies,
     data.activities,
+    data.covers,
   ]) {
     if (new Set(items.map((x) => x.id)).size !== items.length)
       throw new Error('O backup contém IDs duplicados.');
+  }
+  const coverIds = new Set(data.covers.map((c) => c.id));
+  if (
+    data.resources.some(
+      (r) =>
+        (r.coverId && !coverIds.has(r.coverId)) ||
+        (r.type !== 'livro' && (r.coverId || r.coverUrl)),
+    )
+  )
+    throw new Error('O backup contém vínculos de capas inválidos.');
+  if (data.covers.some((c) => !data.resources.some((r) => r.coverId === c.id)))
+    throw new Error('O backup contém capas sem livro associado.');
+  for (const c of data.covers) {
+    const bytes = base64ToBytes(c.data);
+    if (bytes.length > MAX_STORED_COVER_BYTES || detectedMime(bytes) !== c.mime)
+      throw new Error('O backup contém uma imagem inválida.');
   }
   const areas = new Set(data.areas.map((a) => a.id));
   const projects = new Set(data.projects.map((p) => p.id));
@@ -201,12 +268,30 @@ export function validateBackup(raw: unknown): Backup {
 }
 export async function importBackup(raw: unknown) {
   const data = validateBackup(raw);
+  // Decodificação e hash ficam fora da transação: falhas não alteram os dados atuais.
+  const covers = await Promise.all(
+    data.covers.map(async (c) => {
+      const asset = await prepareCoverAsset(
+        new Blob([Uint8Array.from(base64ToBytes(c.data)).buffer], { type: c.mime }),
+      );
+      if (asset.id !== c.id || asset.width !== c.width || asset.height !== c.height)
+        throw new Error('A integridade da imagem do backup não confere. Nenhum dado foi alterado.');
+      return asset;
+    }),
+  );
   await db.transaction('rw', tables(), async () => {
     for (const table of tables()) if (table !== db.settings) await table.clear();
     await db.areas.bulkAdd(data.areas);
     await db.projects.bulkAdd(data.projects);
     await db.tasks.bulkAdd(data.tasks);
-    await db.resources.bulkAdd(data.resources);
+    await db.resources.bulkAdd(
+      data.resources.map((r) => ({
+        ...bookDefaults,
+        ...r,
+        isbnNormalized: normalizeIsbn(r.isbn ?? ''),
+      })),
+    );
+    await db.covers.bulkAdd(covers);
     await db.competencies.bulkAdd(data.competencies);
     await db.activities.bulkAdd(data.activities);
     await db.settings.put({ key: 'initialized', value: 'true' });

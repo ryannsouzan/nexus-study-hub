@@ -1,3 +1,5 @@
+import { BookCard, ResourceListRow } from '../components/LibraryRecords';
+import { useLibraryView } from '../hooks/useLibraryView';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ArrowUpRight, LayoutGrid, Columns3, Pencil, Trash2 } from 'lucide-react';
@@ -369,9 +371,21 @@ export function Library() {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
+  const { view, setView } = useLibraryView();
+  const notify = useNotice();
   const resources = data.resources.filter(
     (r) =>
-      matches(query, r.title, r.description, r.author, ...r.tags) &&
+      matches(
+        query,
+        r.title,
+        r.subtitle,
+        r.isbn,
+        r.isbnNormalized,
+        r.publisher,
+        r.description,
+        r.author,
+        ...r.tags,
+      ) &&
       (!type || r.type === type) &&
       (!status || r.status === status),
   );
@@ -410,13 +424,61 @@ export function Library() {
           ))}
         </select>
         <span className="result-count">{resources.length} recursos</span>
+        <div
+          className="view-toggle library-view-toggle"
+          role="group"
+          aria-label="Visualização da biblioteca"
+        >
+          <button
+            aria-pressed={view === 'shelf'}
+            className={view === 'shelf' ? 'active' : ''}
+            onClick={() => setView('shelf').catch((e) => notify(errorMessage(e), true))}
+          >
+            <LayoutGrid size={16} />
+            Estante
+          </button>
+          <button
+            aria-pressed={view === 'list'}
+            className={view === 'list' ? 'active' : ''}
+            onClick={() => setView('list').catch((e) => notify(errorMessage(e), true))}
+          >
+            <Columns3 size={16} />
+            Lista
+          </button>
+        </div>
       </div>
       {resources.length ? (
-        <div className="cards-grid">
-          {resources.map((r) => (
-            <ResourceCard key={r.id} resource={r} />
-          ))}
-        </div>
+        view === 'list' ? (
+          <section className="resource-list" aria-label="Biblioteca em lista">
+            {resources.map((r) => (
+              <ResourceListRow key={r.id} resource={r} />
+            ))}
+          </section>
+        ) : (
+          <>
+            <section className="book-shelf" aria-label="Estante de livros">
+              {resources
+                .filter((r) => r.type === 'livro')
+                .map((r) => (
+                  <BookCard key={r.id} resource={r} />
+                ))}
+            </section>
+            {resources.some((r) => r.type !== 'livro') && (
+              <section className="section other-resources">
+                <div className="section-heading">
+                  <h2>Outros materiais</h2>
+                </div>
+                <div className="cards-grid">
+                  {resources
+                    .filter((r) => r.type !== 'livro')
+                    .map((r) => (
+                      <ResourceCard key={r.id} resource={r} />
+                    ))}
+                </div>
+              </section>
+            )}
+          </>
+        )
       ) : (
         <Empty />
       )}
