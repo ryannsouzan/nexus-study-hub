@@ -1,6 +1,6 @@
 # Nexus — Personal Knowledge & Learning Hub
 
-Uma aplicação web em português brasileiro para organizar estudos, projetos, tarefas e referências. A versão 0.1.1 (Melhoria 1.1) funciona no navegador, com dados persistidos em IndexedDB, sem conta ou API remota.
+Uma aplicação web em português brasileiro para organizar estudos, projetos, tarefas e referências. A versão 0.2.1 (Fase 2.1) funciona no navegador, com dados persistidos em IndexedDB, sem conta ou API remota.
 
 ## Iniciar
 
@@ -57,7 +57,7 @@ Os exemplos iniciais são explicitamente marcados como **Exemplo**, não registr
 | Local                                                                                      | Responsabilidade                                                                                   |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | `src/models/schema.ts`                                                                     | Entidades, tipos e validações Zod, incluindo competências preparadas para uma fase futura          |
-| `src/services/db.ts`                                                                       | Dexie, esquema IndexedDB versão 2 e migração automática dos registros da Fase 1, tabelas e índices |
+| `src/services/db.ts`                                                                       | Dexie, esquema IndexedDB versão 3 e migração automática dos registros da Fase 1, tabelas e índices |
 | `src/services/repository.ts`                                                               | CRUD, transações, integridade, histórico, backup e remoção de exemplos                             |
 | `src/services/calculations.ts`                                                             | Progresso, indicadores, filtros, busca e datas locais                                              |
 | `src/services/covers.ts`                                                                   | Validação, decodificação, otimização proporcional, hash SHA-256 e codificação binária de capas     |
@@ -86,9 +86,9 @@ As operações de dados passam pela camada de serviços; o React recebe atualiza
 
 ## Backup e armazenamento
 
-Configurações → Exportar backup gera JSON com versão do esquema, data de exportação, áreas, projetos, tarefas, recursos, competências, histórico e capas locais. As imagens são Blobs no IndexedDB e são codificadas em Base64 somente no arquivo JSON. Imagens idênticas são exportadas uma única vez, vinculadas por ID/hash. Tema, preferência Estante/Lista e configurações internas do navegador não são exportados nem substituídos pela importação.
+Configurações → Exportar backup gera JSON com versão do esquema, data de exportação, áreas, projetos, tarefas, recursos, competências, histórico, capas locais e todas as entidades das trilhas. As imagens são Blobs no IndexedDB e são codificadas em Base64 somente no arquivo JSON. Imagens idênticas são exportadas uma única vez, vinculadas por ID/hash. Tema, preferência Estante/Lista e configurações internas do navegador não são exportados nem substituídos pela importação.
 
-Para restaurar, selecione um JSON de até 100 MB. O sistema valida versão, campos, datas, IDs únicos, contagens de progresso e integridade dos relacionamentos **antes** de pedir confirmação. A importação substitui o conjunto completo de dados em uma transação, mantendo os IDs. Formato inválido, versão incompatível ou vínculos quebrados são rejeitados sem alterar os dados existentes. Backups da versão 1 (Fase 1, sem imagens locais) continuam aceitos e são normalizados para o esquema atual. Backups de versões futuras não são aceitos. Não há mesclagem de backups. Exporte seus dados atuais antes de substituir.
+Para restaurar, selecione um JSON de até 100 MB. O sistema valida versão, campos, datas, IDs únicos, contagens de progresso e integridade dos relacionamentos **antes** de pedir confirmação. A importação substitui o conjunto completo de dados em uma transação, mantendo os IDs. Formato inválido, versão incompatível ou vínculos quebrados são rejeitados sem alterar os dados existentes. Backups das versões 1 e 2 continuam aceitos e são normalizados para o esquema atual. Backups de versões futuras não são aceitos. Não há mesclagem de backups. Exporte seus dados atuais antes de substituir.
 
 Os dados pertencem ao navegador **e à origem do site** (protocolo, host e porta). Mudar o endereço pode mostrar um banco vazio mesmo no mesmo navegador. Limpar os dados do site, perder o dispositivo ou usar navegação privada pode perder os registros. Não há sincronização ou cópia automática: faça backups regulares. O arquivo JSON contém suas informações pessoais.
 
@@ -136,7 +136,7 @@ Os fluxos de aceitação foram executados: projeto com 40%, livro com 30%, persi
 
 ## Limites desta versão
 
-Sem backend, autenticação, sincronização, calendário avançado, IA, grafo, upload de PDFs, integrações, cronômetro ou interface de competências. O Kanban muda o status por seletor; não oferece arrastar e soltar. A aplicação precisa ser servida por HTTP(S); abrir `index.html` diretamente não é suportado. Hospedagem estática futura deve redirecionar rotas da SPA para `index.html`. Não há service worker para garantir recarga offline sem servidor.
+Sem backend, autenticação, sincronização, calendário avançado, IA, grafo global de conhecimento, upload de PDFs, integrações externas, cronômetro ou interface de competências. O Kanban muda o status por seletor; não oferece arrastar e soltar. A aplicação precisa ser servida por HTTP(S); abrir `index.html` diretamente não é suportado. Hospedagem estática futura deve redirecionar rotas da SPA para `index.html`. Não há service worker para garantir recarga offline sem servidor.
 
 IndexedDB deve estar disponível e autorizado. A preferência de tema continua válida na sessão se localStorage estiver indisponível. Exportar muitos registros pode exigir mais memória do navegador; o MVP destina-se ao uso pessoal.
 
@@ -149,3 +149,32 @@ Cada tarefa da nuvem já usa um ambiente isolado: utilize o checkout existente, 
 ## Revisar a Melhoria 1.1
 
 A branch `feat/library-book-covers` parte da `main` após a integração da Fase 1 pelo PR #1. Compare a branch com `main` para revisar somente a melhoria. Não é necessário fazer merge ou publicar a aplicação para testar a branch com `npm ci` e `npm run dev`.
+
+## Fase 2.1 — Trilhas de aprendizagem
+
+Acesse **Desenvolvimento → Trilhas de aprendizagem**. Crie uma trilha, associe uma área/projeto e organize etapas, objetivos, tópicos e pré-requisitos. Lista estruturada, Roadmap e Por progresso compartilham os mesmos dados; a preferência de visualização persiste no navegador. O Roadmap usa React Flow, layout automático, zoom, arraste do fundo, centralização e seleção por teclado. Os vínculos são editados no painel da etapa.
+
+A visão geral oferece busca, filtros por área/status, ordenação por prioridade/atualização/prazo, edição, arquivamento e exclusão. Áreas e projetos exibem trilhas relacionadas; o dashboard mostra trilhas ativas e próximos passos. Os exemplos de DoE, Python e espectrometria de massas são carregados somente por solicitação, marcados como exemplos e sem conclusões fictícias.
+
+### Conclusão e progresso
+
+- Dependências formam um DAG dentro de cada trilha: autorreferência, duplicação, ciclos e vínculos entre trilhas são rejeitados. Uma etapa só pode ser concluída após todos os pré-requisitos e critérios obrigatórios. Não há conclusão forçada.
+- Critérios podem exigir tarefa concluída, tópico dominado por autoavaliação, evidência textual ou avaliação manual. Tarefas concluídas não significam domínio automático. Critérios opcionais não bloqueiam nem entram no percentual.
+- Progresso da etapa é a fração de critérios obrigatórios atendidos. Sem critérios obrigatórios aparece **Sem progresso mensurável**. Concluir a etapa exige ação explícita, mesmo com 100% dos critérios.
+- O progresso da trilha é a média ponderada das etapas mensuráveis: peso configurado, senão horas estimadas, senão 1. A interface informa quantas etapas entram no cálculo; etapas sem critérios ficam fora da média. A trilha só pode ser concluída explicitamente quando todas as etapas estiverem concluídas.
+- Reabrir uma tarefa, remover evidência ou alterar domínio pode invalidar etapas concluídas e seus descendentes; suas datas de conclusão são apagadas e uma trilha concluída volta a ativa. Nunca há conclusão automática.
+- Tarefas e materiais são associados por ID, sem cópias. Excluir trilhas/etapas remove os registros próprios e associações, preservando tarefas, materiais e capas. Excluir uma área/projeto desvincula a trilha; excluir tarefas/materiais remove seus vínculos. Reordenar etapas não modifica dependências.
+
+### Persistência e migração
+
+O esquema Dexie 3 adiciona sete tabelas normalizadas: `learningPaths`, `learningStages`, `learningTopics`, `learningDependencies`, `learningStageResources`, `learningStageTasks` e `learningCriteria`. A migração é aditiva e mantém registros, IDs e Blobs de capas existentes. O JSON de backup é versão 3; versões 1 e 2 são normalizadas com coleções de trilhas vazias. A importação valida também referências, posições, ciclos e coerência das conclusões antes de substituir tudo em uma transação. Preferências locais não são substituídas.
+
+`src/models/learning.ts` define os contratos Zod; `src/domain/learning.ts` concentra DAG, critérios, progresso e validação de backup; `src/services/learning.ts` implementa operações transacionais; `learningState.ts` reconcilia conclusões; `learningExamples.ts` instala demonstrações opcionais. As páginas estão em `src/pages/learning` e os editores/painéis em `src/components/learning`. As rotas de trilhas e a biblioteca React Flow carregam sob demanda.
+
+### Validação da Fase 2.1
+
+Resultado executado: **38 testes unitários/de integração** e **7 cenários Chromium** aprovados (regressão das fases anteriores e dois cenários de trilhas). TypeScript, ESLint, Prettier e build de produção aprovados.
+
+Os testes incluem CRUD, ordenação, múltiplos pré-requisitos, ciclos longos, bloqueio/desbloqueio, ponderação, autoavaliação, reutilização de tarefas, cascatas seguras, persistência, migração v2 e backup inválido. O cenário Chromium de DoE cria quatro etapas, tarefa, tópico, evidência e avaliação manual, associa um livro, usa o Roadmap por teclado, conclui a trilha, reabre uma tarefa e restaura o backup. Outro cenário verifica exemplos opcionais, filtros, ordenação, exclusão e mobile. Capturas geradas usam dados de teste.
+
+Para revisar esta entrega, compare `feat/learning-paths` com `main`. Não há merge automático nem deploy.

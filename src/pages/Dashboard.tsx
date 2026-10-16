@@ -1,3 +1,4 @@
+import { LearningDashboard } from '../components/learning/LearningIntegrations';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -208,6 +209,7 @@ export function Dashboard() {
           )}
         </section>
       </div>
+      <LearningDashboard />
       <section className="panel activity-panel">
         <div className="section-heading">
           <div>

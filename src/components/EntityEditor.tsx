@@ -1,3 +1,4 @@
+import { createStageTask } from '../services/learning';
 import { useState } from 'react';
 import { CoverFields, type CoverDraft } from './CoverFields';
 import { useForm } from 'react-hook-form';
@@ -55,6 +56,7 @@ type Values = {
 export type EditorTarget = {
   kind: EntityKind;
   record?: Area | Project | Task | Resource;
+  stageId?: string;
   areaId?: string;
   projectId?: string;
 };
@@ -149,7 +151,11 @@ export function EntityEditor({
     try {
       if (kind === 'area') await saveArea(areaInputSchema.parse(raw), record?.id);
       if (kind === 'project') await saveProject(projectInputSchema.parse(raw), record?.id);
-      if (kind === 'task') await saveTask(taskInputSchema.parse(raw), record?.id);
+      if (kind === 'task') {
+        if (target.stageId && !record)
+          await createStageTask(target.stageId, taskInputSchema.parse(raw));
+        else await saveTask(taskInputSchema.parse(raw), record?.id);
+      }
       if (kind === 'resource')
         await saveResource(
           resourceInputSchema.parse(raw),

@@ -1,3 +1,12 @@
+import type {
+  LearningPath,
+  LearningStage,
+  LearningTopic,
+  LearningDependency,
+  StageResource,
+  StageTask,
+  LearningCriterion,
+} from '../models/learning';
 import { bookDefaults } from '../models/books';
 import type { CoverAsset } from './covers';
 import Dexie, { type EntityTable } from 'dexie';
@@ -10,6 +19,13 @@ export class NexusDatabase extends Dexie {
   competencies!: EntityTable<Competency, 'id'>;
   activities!: EntityTable<Activity, 'id'>;
   covers!: EntityTable<CoverAsset, 'id'>;
+  learningPaths!: EntityTable<LearningPath, 'id'>;
+  learningStages!: EntityTable<LearningStage, 'id'>;
+  learningTopics!: EntityTable<LearningTopic, 'id'>;
+  learningDependencies!: EntityTable<LearningDependency, 'id'>;
+  learningStageResources!: EntityTable<StageResource, 'id'>;
+  learningStageTasks!: EntityTable<StageTask, 'id'>;
+  learningCriteria!: EntityTable<LearningCriterion, 'id'>;
   settings!: EntityTable<{ key: string; value: string }, 'key'>;
   constructor(name = 'nexus-study-hub') {
     super(name);
@@ -33,6 +49,16 @@ export class NexusDatabase extends Dexie {
               if (resource[key] === undefined) resource[key] = value;
           });
       });
+    this.version(3).stores({
+      learningPaths: 'id, areaId, projectId, status, updatedAt',
+      learningStages: 'id, learningPathId, [learningPathId+position]',
+      learningTopics: 'id, stageId',
+      learningDependencies:
+        'id, learningPathId, prerequisiteStageId, dependentStageId, &[prerequisiteStageId+dependentStageId]',
+      learningStageResources: 'id, stageId, resourceId, &[stageId+resourceId]',
+      learningStageTasks: 'id, stageId, taskId, &[stageId+taskId]',
+      learningCriteria: 'id, stageId, [type+targetId]',
+    });
   }
 }
 export const db = new NexusDatabase();

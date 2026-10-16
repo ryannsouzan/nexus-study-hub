@@ -164,7 +164,7 @@ describe('Backup de capas', () => {
     const id = await saveResource(book, undefined, image());
     await saveResource({ ...book, title: 'Outro' }, undefined, image());
     const backup = await exportBackup();
-    expect(backup.schemaVersion).toBe(2);
+    expect(backup.schemaVersion).toBe(3);
     expect(backup.covers).toHaveLength(1);
     expect(base64ToBytes(backup.covers[0].data)).toEqual(Uint8Array.from(fixture));
     await deleteEntity('resource', id);
@@ -235,7 +235,7 @@ describe('Migração do IndexedDB', () => {
     const current = new NexusDatabase(name);
     try {
       await current.open();
-      expect(current.verno).toBe(2);
+      expect(current.verno).toBe(3);
       expect(await current.resources.get('old-book')).toMatchObject({
         id: 'old-book',
         coverId: '',

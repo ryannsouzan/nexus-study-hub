@@ -169,7 +169,7 @@ test('capas reais: validação, otimização, troca, recarga, backup, restauraç
   const download = await downloadPromise;
   const backupPath = (await download.path())!;
   const backup = JSON.parse(await readFile(backupPath, 'utf8'));
-  expect(backup.schemaVersion).toBe(2);
+  expect(backup.schemaVersion).toBe(3);
   expect(backup.covers).toHaveLength(1);
   expect(backup.covers[0].data.length).toBeGreaterThan(100);
   expect(backup.resources[0].isbnNormalized).toBe('9780596520687');
