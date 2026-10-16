@@ -12,6 +12,14 @@ const Dashboard = lazy(() =>
   import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })),
 );
 import { Areas, Projects, Tasks, Library } from './pages/Collections';
+const LearningPaths = lazy(() =>
+  import('./pages/learning/LearningPaths').then((module) => ({ default: module.LearningPaths })),
+);
+const LearningPathDetails = lazy(() =>
+  import('./pages/learning/LearningPathDetails').then((module) => ({
+    default: module.LearningPathDetails,
+  })),
+);
 import { Details } from './pages/Details';
 import { Settings } from './pages/Settings';
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
@@ -65,6 +73,22 @@ function WorkspaceApp() {
             element={
               <Suspense fallback={<p role="status">Carregando visão geral…</p>}>
                 <Dashboard />
+              </Suspense>
+            }
+          />
+          <Route
+            path="trilhas"
+            element={
+              <Suspense fallback={<p role="status">Carregando trilhas…</p>}>
+                <LearningPaths />
+              </Suspense>
+            }
+          />
+          <Route
+            path="trilhas/:id"
+            element={
+              <Suspense fallback={<p role="status">Carregando trilha…</p>}>
+                <LearningPathDetails />
               </Suspense>
             }
           />

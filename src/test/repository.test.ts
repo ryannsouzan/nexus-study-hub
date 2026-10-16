@@ -66,22 +66,9 @@ const resource: ResourceInput = {
   completedLessons: 0,
 };
 beforeEach(async () => {
-  await db.transaction(
-    'rw',
-    [
-      db.areas,
-      db.projects,
-      db.tasks,
-      db.resources,
-      db.competencies,
-      db.activities,
-      db.settings,
-      db.covers,
-    ],
-    async () => {
-      await Promise.all(db.tables.map((t) => t.clear()));
-    },
-  );
+  await db.transaction('rw', db.tables, async () => {
+    await Promise.all(db.tables.map((t) => t.clear()));
+  });
 });
 describe('Áreas, projetos e tarefas', () => {
   it('cria e edita uma área; valida campos', async () => {
@@ -218,7 +205,7 @@ describe('Backup transacional', () => {
     const t = await saveTask({ ...task, projectId: p, status: 'concluida' });
     const r = await saveResource({ ...resource, areaId: a, projectIds: [p] });
     const backup = await exportBackup();
-    expect(backup.schemaVersion).toBe(2);
+    expect(backup.schemaVersion).toBe(3);
     await deleteEntity('project', p);
     await importBackup(JSON.parse(JSON.stringify(backup)));
     expect((await db.tasks.get(t))?.projectId).toBe(p);

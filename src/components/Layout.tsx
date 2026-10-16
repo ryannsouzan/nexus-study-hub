@@ -1,3 +1,6 @@
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../services/db';
+import { Route as RouteIcon } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
 import {
@@ -34,10 +37,15 @@ const groups = [
     ],
   },
   { label: 'CONHECIMENTO', items: [{ to: '/biblioteca', label: 'Biblioteca', icon: Library }] },
+  {
+    label: 'DESENVOLVIMENTO',
+    items: [{ to: '/trilhas', label: 'Trilhas de aprendizagem', icon: RouteIcon }],
+  },
   { label: 'SISTEMA', items: [{ to: '/configuracoes', label: 'Configurações', icon: Settings }] },
 ];
 export function Layout() {
   const { data } = useNexus();
+  const paths = useLiveQuery(() => db.learningPaths.toArray(), [], []);
   const [query, setQuery] = useState('');
   const [mobile, setMobile] = useState(false);
   const location = useLocation();
@@ -45,6 +53,15 @@ export function Layout() {
     .flatMap((g) => g.items)
     .find((i) => (i.to === '/' ? location.pathname === '/' : location.pathname.startsWith(i.to)));
   const categories = [
+    {
+      label: 'Trilhas',
+      items: paths.map((p) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description + ' ' + p.objective,
+        path: `/trilhas/${p.id}`,
+      })),
+    },
     {
       label: 'Áreas',
       items: data.areas.map((a) => ({

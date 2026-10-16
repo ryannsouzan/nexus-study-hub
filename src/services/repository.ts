@@ -1,4 +1,7 @@
 import { db } from './db';
+import { emptyLearning } from '../models/learning';
+import { validateLearningData } from '../domain/learning';
+import { learningSnapshot, reconcileLearningState, removePathRecords } from './learningState';
 import { bookDefaults, normalizeIsbn } from '../models/books';
 import {
   blobBytes,
@@ -15,6 +18,7 @@ import {
   resourceInputSchema,
   backupSchema,
   legacyBackupSchema,
+  previousBackupSchema,
   type AreaInput,
   type ProjectInput,
   type TaskInput,
@@ -23,16 +27,7 @@ import {
   type Backup,
   type Activity,
 } from '../models/schema';
-const tables = () => [
-  db.areas,
-  db.projects,
-  db.tasks,
-  db.resources,
-  db.competencies,
-  db.activities,
-  db.settings,
-  db.covers,
-];
+const tables = () => db.tables;
 function meta(existing?: { id: string; createdAt: string; example: boolean }) {
   const now = new Date().toISOString();
   return {
@@ -99,6 +94,7 @@ export async function saveTask(input: TaskInput, id?: string) {
         data.status === 'concluida' ? (old?.completedAt ?? new Date().toISOString()) : null,
     };
     await db.tasks.put(record);
+    await reconcileLearningState();
     await log(
       'task',
       record.id,
@@ -156,6 +152,7 @@ export async function saveResource(input: ResourceInput, id?: string, coverChang
 export async function deleteEntity(kind: EntityKind, id: string) {
   await db.transaction('rw', tables(), async () => {
     if (kind === 'area') {
+      await db.learningPaths.where('areaId').equals(id).modify({ areaId: '' });
       await db.projects.where('areaId').equals(id).modify({ areaId: '' });
       await db.resources.where('areaId').equals(id).modify({ areaId: '' });
       await db.competencies.toCollection().modify((c) => {
@@ -164,6 +161,7 @@ export async function deleteEntity(kind: EntityKind, id: string) {
       await db.areas.delete(id);
     }
     if (kind === 'project') {
+      await db.learningPaths.where('projectId').equals(id).modify({ projectId: '' });
       await db.tasks.where('projectId').equals(id).modify({ projectId: '' });
       await db.resources.toCollection().modify((r) => {
         r.projectIds = r.projectIds.filter((x) => x !== id);
@@ -173,22 +171,28 @@ export async function deleteEntity(kind: EntityKind, id: string) {
       });
       await db.projects.delete(id);
     }
-    if (kind === 'task') await db.tasks.delete(id);
+    if (kind === 'task') {
+      await db.learningStageTasks.where('taskId').equals(id).delete();
+      await db.learningCriteria.where('[type+targetId]').equals(['task', id]).delete();
+      await db.tasks.delete(id);
+    }
     if (kind === 'resource') {
+      await db.learningStageResources.where('resourceId').equals(id).delete();
       const resource = await db.resources.get(id);
       await db.resources.delete(id);
       await removeUnusedCover(resource?.coverId);
     }
     await db.activities.where('entityId').equals(id).delete();
+    await reconcileLearningState();
   });
 }
 export async function exportBackup(): Promise<Backup> {
   const snapshot = await db.transaction('r', tables(), async () => ({
-    schemaVersion: 2 as const,
+    schemaVersion: 3 as const,
+    ...(await learningSnapshot()),
     exportedAt: new Date().toISOString(),
     areas: await db.areas.toArray(),
     projects: await db.projects.toArray(),
-    tasks: await db.tasks.toArray(),
     resources: await db.resources.toArray(),
     competencies: await db.competencies.toArray(),
     activities: await db.activities.toArray(),
@@ -209,8 +213,13 @@ export async function exportBackup(): Promise<Backup> {
 }
 export function validateBackup(raw: unknown): Backup {
   const legacy = legacyBackupSchema.safeParse(raw);
+  const previous = previousBackupSchema.safeParse(raw);
   const parsed = backupSchema.safeParse(
-    legacy.success ? { ...legacy.data, schemaVersion: 2, covers: [] } : raw,
+    legacy.success
+      ? { ...legacy.data, schemaVersion: 3, covers: [], ...emptyLearning }
+      : previous.success
+        ? { ...previous.data, schemaVersion: 3, ...emptyLearning }
+        : raw,
   );
   if (!parsed.success)
     throw new Error('Backup inválido ou versão incompatível. Nenhum dado foi alterado.');
@@ -223,6 +232,7 @@ export function validateBackup(raw: unknown): Backup {
     data.competencies,
     data.activities,
     data.covers,
+    ...Object.keys(emptyLearning).map((key) => data[key as keyof typeof emptyLearning]),
   ]) {
     if (new Set(items.map((x) => x.id)).size !== items.length)
       throw new Error('O backup contém IDs duplicados.');
@@ -264,6 +274,7 @@ export function validateBackup(raw: unknown): Backup {
   };
   if (data.activities.some((a) => !ids[a.entity].has(a.entityId)))
     throw new Error('O histórico contém relacionamentos inválidos.');
+  validateLearningData(data, areas, projects, new Set(data.resources.map((r) => r.id)));
   return data;
 }
 export async function importBackup(raw: unknown) {
@@ -292,6 +303,13 @@ export async function importBackup(raw: unknown) {
       })),
     );
     await db.covers.bulkAdd(covers);
+    await db.learningPaths.bulkAdd(data.learningPaths);
+    await db.learningStages.bulkAdd(data.learningStages);
+    await db.learningTopics.bulkAdd(data.learningTopics);
+    await db.learningDependencies.bulkAdd(data.learningDependencies);
+    await db.learningStageResources.bulkAdd(data.learningStageResources);
+    await db.learningStageTasks.bulkAdd(data.learningStageTasks);
+    await db.learningCriteria.bulkAdd(data.learningCriteria);
     await db.competencies.bulkAdd(data.competencies);
     await db.activities.bulkAdd(data.activities);
     await db.settings.put({ key: 'initialized', value: 'true' });
@@ -299,6 +317,7 @@ export async function importBackup(raw: unknown) {
 }
 export async function removeExamples() {
   await db.transaction('rw', tables(), async () => {
+    for (const p of await db.learningPaths.toArray()) if (p.example) await removePathRecords(p.id);
     for (const a of await db.areas.toArray()) if (a.example) await deleteEntity('area', a.id);
     for (const p of await db.projects.toArray()) if (p.example) await deleteEntity('project', p.id);
     for (const t of await db.tasks.toArray()) if (t.example) await deleteEntity('task', t.id);

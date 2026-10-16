@@ -1,3 +1,4 @@
+import { learningBackupFields } from './learning';
 import { z } from 'zod';
 import { isValidIsbn, normalizeIsbn } from './books';
 export const priorities = { alta: 'Alta', media: 'Média', baixa: 'Baixa' } as const;
@@ -190,9 +191,13 @@ export const coverBackupSchema = z.object({
   data: z.string().min(1).max(2796204),
 });
 export const legacyBackupSchema = backupRecords.extend({ schemaVersion: z.literal(1) });
-export const backupSchema = backupRecords.extend({
+export const previousBackupSchema = backupRecords.extend({
   schemaVersion: z.literal(2),
   covers: z.array(coverBackupSchema),
+});
+export const backupSchema = previousBackupSchema.extend({
+  schemaVersion: z.literal(3),
+  ...learningBackupFields,
 });
 export type Area = z.infer<typeof areaSchema>;
 export type Project = z.infer<typeof projectSchema>;

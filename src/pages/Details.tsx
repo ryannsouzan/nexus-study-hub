@@ -1,3 +1,4 @@
+import { RelatedLearningPaths } from '../components/learning/LearningIntegrations';
 import { BookDetails } from '../components/BookDetails';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -470,6 +471,7 @@ export function Details({ kind }: { kind: EntityKind }) {
           )}
         </section>
       )}
+      {(area || project) && <RelatedLearningPaths areaId={area?.id} projectId={project?.id} />}
       <section className="record-meta">
         <span>Criado em {new Date(record.createdAt).toLocaleString('pt-BR')}</span>
         <span>Atualizado em {new Date(record.updatedAt).toLocaleString('pt-BR')}</span>

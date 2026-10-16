@@ -1,7 +1,7 @@
 {
   "name": "nexus-study-hub",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -18,6 +18,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tailwindcss/vite": "^4.1.18",
+    "@xyflow/react": "^12.12.0",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
     "lucide-react": "^0.468.0",

@@ -124,9 +124,10 @@ export function Settings({
             />
           </div>
           <p className="small muted">
-            Formato JSON · Esquema versão 2 · Áreas, projetos, tarefas, biblioteca, competências e
-            histórico e capas locais. URLs externas são preservadas como links, sem incorporar as
-            imagens. Backups da versão 1 continuam aceitos.
+            Formato JSON · Esquema versão 3 · Áreas, projetos, tarefas, biblioteca, competências e
+            histórico, capas locais, trilhas, etapas, tópicos, critérios, dependências e
+            associações. URLs externas são preservadas como links, sem incorporar as imagens.
+            Backups das versões 1 e 2 continuam aceitos.
           </p>
         </section>
         <section className="panel settings-section">
@@ -146,7 +147,7 @@ export function Settings({
           </p>
         </section>
         <section className="panel settings-section about">
-          <span className="eyebrow">NEXUS · VERSÃO 0.1.1</span>
+          <span className="eyebrow">NEXUS · VERSÃO 0.2.1</span>
           <h2>Um lugar para conectar o que você aprende.</h2>
           <p>
             MVP local de estudos, projetos e conhecimento. Sem contas, sem serviços externos e sem
@@ -157,7 +158,7 @@ export function Settings({
       {backup && (
         <ConfirmDialog
           title="Substituir todos os dados?"
-          description={`Este backup contém ${backup.areas.length} áreas, ${backup.projects.length} projetos, ${backup.tasks.length} tarefas e ${backup.resources.length} recursos. Todos os dados atuais serão substituídos. Exporte um backup antes de continuar.`}
+          description={`Este backup contém ${backup.areas.length} áreas, ${backup.projects.length} projetos, ${backup.tasks.length} tarefas e ${backup.resources.length} recursos e ${backup.learningPaths.length} trilhas. Todos os dados atuais serão substituídos. Exporte um backup antes de continuar.`}
           onClose={() => setBackup(null)}
           onConfirm={async () => {
             await importBackup(backup);
